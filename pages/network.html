@@ -1,0 +1,24 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07111f"><title>Network Lab — LUTFITECH</title><link rel="stylesheet" href="../assets/css/style.css"></head><body><div class="bg-grid"></div><div class="orb orb-a"></div><div class="orb orb-b"></div><header class="topbar"><a class="brand" href="../index.html"><span>LUTFI</span>TECH</a><button class="menu-btn" id="menuBtn">☰</button><nav id="nav"><a href="../index.html">Beranda</a><a href="dashboard.html">Dashboard</a><a href="network.html">Network Lab</a><a href="tools.html">Tools</a><a href="speedtest.html">Pengujian</a><a href="monitor.html">Monitor</a><a href="server.html">Server</a><a href="help.html">Bantuan</a></nav></header><main><section class="section page-enter"><span class="kicker">LUTFITECH</span><h1 style="font:700 clamp(2rem,6vw,4rem) 'Space Grotesk';margin:8px 0 12px">Network Lab</h1>
+<div class="glass" style="padding:22px;border-radius:18px">
+<h2 style="font:600 1.5rem 'Space Grotesk';margin-bottom:16px">IPv4 Subnet Calculator</h2>
+<div class="grid" style="grid-template-columns:repeat(2,1fr)">
+<label>IP Address<input id="ip" value="192.168.1.10" placeholder="192.168.1.10"></label>
+<label>Prefix / CIDR<input id="cidr" value="24" type="number" min="0" max="32"></label>
+</div>
+<button class="btn primary" id="calc" style="margin-top:14px">Hitung</button>
+<div id="result" class="grid three" style="margin-top:18px"></div>
+</div>
+<div class="card" style="margin-top:14px"><h3>Referensi cepat</h3><p>/24 = 255.255.255.0 · 254 host usable<br>/25 = 255.255.255.128 · 126 host usable<br>/26 = 255.255.255.192 · 62 host usable<br>/27 = 255.255.255.224 · 30 host usable</p></div>
+<script>
+function calc(){
+ const ip=document.getElementById('ip').value.trim(), p=+document.getElementById('cidr').value;
+ const a=ip.split('.').map(Number);
+ if(a.length!==4||a.some(x=>x<0||x>255)||p<0||p>32){document.getElementById('result').innerHTML='<div class="card"><h3>Input tidak valid</h3></div>';return}
+ const n= a.map(x=>x>>>0); let val=((n[0]<<24)>>>0)+(n[1]<<16)+(n[2]<<8)+n[3];
+ const mask=p===0?0:(0xffffffff << (32-p))>>>0; const net=(val&mask)>>>0; const bc=(net | (~mask>>>0))>>>0;
+ const out=x=>[(x>>>24)&255,(x>>>16)&255,(x>>>8)&255,x&255].join('.');
+ const hosts=p>=31?Math.max(0,2**(32-p)):2**(32-p)-2;
+ document.getElementById('result').innerHTML=[['Network',out(net)],['Broadcast',out(bc)],['First Host',p>=31?'-':out((net+1)>>>0)],['Last Host',p>=31?'-':out((bc-1)>>>0)],['Subnet Mask',out(mask)],['Usable Hosts',hosts]].map(x=>`<div class="card"><small>${x[0]}</small><h3>${x[1]}</h3></div>`).join('');
+}
+document.getElementById('calc').onclick=calc;calc();
+</script></section></main><footer><span>LUTFITECH © 2026</span><span>Digital Network Lab</span></footer><script src="../assets/js/app.js"></script>

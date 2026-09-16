@@ -1,0 +1,40 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07111f"><title>Internet Speed Test — LUTFITECH</title><link rel="stylesheet" href="../assets/css/style.css"></head><body><div class="bg-grid"></div><div class="orb orb-a"></div><div class="orb orb-b"></div><header class="topbar"><a class="brand" href="../index.html"><span>LUTFI</span>TECH</a><button class="menu-btn" id="menuBtn">☰</button><nav id="nav"><a href="../index.html">Beranda</a><a href="dashboard.html">Dashboard</a><a href="network.html">Network Lab</a><a href="tools.html">Tools</a><a href="speedtest.html">Pengujian</a><a href="monitor.html">Monitor</a><a href="server.html">Server</a><a href="help.html">Bantuan</a></nav></header><main><section class="section page-enter"><span class="kicker">LUTFITECH</span><h1 style="font:700 clamp(2rem,6vw,4rem) 'Space Grotesk';margin:8px 0 12px">Internet Speed Test</h1>
+<div class="glass" style="padding:24px;border-radius:22px;text-align:center">
+<div id="gauge" style="width:min(280px,75vw);aspect-ratio:1;margin:auto;border-radius:50%;background:conic-gradient(var(--accent) 0deg,#18283b 0deg);display:grid;place-items:center;position:relative">
+<div style="width:82%;height:82%;border-radius:50%;background:#07111f;display:grid;place-items:center">
+<div><div id="speed" style="font:700 clamp(2.5rem,10vw,4.5rem) 'Space Grotesk'">0.00</div><small>Mbps</small></div></div></div>
+<div id="stage" style="margin:18px 0 8px;color:var(--accent);font-weight:800;letter-spacing:.12em">READY</div>
+<div id="detail" style="color:var(--muted);min-height:24px">Tekan mulai untuk menguji koneksi.</div>
+<div class="actions" style="justify-content:center"><button class="btn primary" id="start">⚡ Mulai Pengujian</button><button class="btn" id="stop" disabled>Stop</button></div>
+<div class="grid three" style="margin-top:20px;text-align:left">
+<div class="card"><small>Ping</small><h3 id="ping">-- ms</h3></div><div class="card"><small>Download</small><h3 id="down">-- Mbps</h3></div><div class="card"><small>Upload</small><h3 id="up">-- Mbps</h3></div>
+</div>
+<div class="card" style="margin-top:14px;text-align:left"><h3>Progress</h3><div style="height:8px;background:#142337;border-radius:99px;overflow:hidden;margin:10px 0"><div id="bar" style="height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .18s ease"></div></div><p id="log" style="font-family:monospace;font-size:.75rem;line-height:1.7;color:#8fa7bc">Siap.</p></div>
+</div>
+<script>
+let stopped=false;
+const $=id=>document.getElementById(id);
+function setGauge(v,max=200){v=Math.max(0,Math.min(v,max));$('speed').textContent=v.toFixed(2);$('gauge').style.background=`conic-gradient(var(--accent) ${v/max*360}deg,#18283b 0deg)`}
+function log(s){$('log').textContent=s}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+function mbps(bytes,ms){return bytes*8/((ms/1000)*1000000)}
+async function pingTest(){
+ $('stage').textContent='PING';$('detail').textContent='Mengukur latency...';
+ let vals=[];for(let i=0;i<3;i++){if(stopped)throw 0;let t=performance.now();await fetch('https://speed.cloudflare.com/__down?bytes=1&x='+Date.now()+i,{cache:'no-store'});vals.push(performance.now()-t);await sleep(100)}
+ let x=vals.reduce((a,b)=>a+b)/vals.length;$('ping').textContent=Math.round(x)+' ms';return x
+}
+async function downloadTest(){
+ $('stage').textContent='DOWNLOAD';let sizes=[1000000,3000000,5000000,10000000], total=0,last=performance.now(),lastBytes=0,smoothed=0;
+ for(const size of sizes){if(stopped)throw 0;let t=performance.now();let r=await fetch('https://speed.cloudflare.com/__down?bytes='+size+'&x='+Date.now(),{cache:'no-store'});let b=await r.arrayBuffer();let ms=performance.now()-t;total+=b.byteLength;let m=mbps(b.byteLength,ms);smoothed=smoothed?smoothed*.35+m*.65:m;setGauge(smoothed);$('down').textContent=smoothed.toFixed(2)+' Mbps';$('detail').textContent=`Download ${Math.round(total/1048576)} MB • ${smoothed.toFixed(1)} Mbps`;$('bar').style.width=Math.min(70,total/19000000*70)+'%';log(`DOWNLOAD  ${Math.round(total/1048576)} MB  |  ${smoothed.toFixed(2)} Mbps`)}
+ return smoothed
+}
+async function uploadTest(){
+ $('stage').textContent='UPLOAD';let total=0, vals=[];for(let i=0;i<3;i++){if(stopped)throw 0;let bytes=1200000, data=new Uint8Array(bytes);crypto.getRandomValues(data.subarray(0,65536));let t=performance.now();await fetch('https://speed.cloudflare.com/__up?x='+Date.now()+i,{method:'POST',body:data,cache:'no-store'});let ms=performance.now()-t;let m=mbps(bytes,ms);vals.push(m);total+=bytes;let avg=vals.reduce((a,b)=>a+b)/vals.length;setGauge(avg);$('up').textContent=avg.toFixed(2)+' Mbps';$('detail').textContent=`Upload ${Math.round(total/1048576)} MB • ${avg.toFixed(1)} Mbps`;$('bar').style.width=(70+(i+1)*10)+'%';log(`UPLOAD    ${Math.round(total/1048576)} MB  |  ${avg.toFixed(2)} Mbps`)}
+ return vals.reduce((a,b)=>a+b)/vals.length
+}
+async function run(){
+ stopped=false;$('start').disabled=true;$('stop').disabled=false;$('ping').textContent=$('down').textContent=$('up').textContent='--';$('bar').style.width='0%';setGauge(0);log('Memulai pengujian...');
+ try{await pingTest();await downloadTest();await uploadTest();if(stopped)return;$('stage').textContent='DONE';$('detail').textContent='Pengujian selesai.';$('bar').style.width='100%';log(`SELESAI • ${new Date().toLocaleTimeString('id-ID')}`)}catch(e){if(!stopped){$('stage').textContent='ERROR';$('detail').textContent='Browser memblokir endpoint atau koneksi bermasalah.';log('ERROR: '+(e?.message||e))}}finally{$('start').disabled=false;$('stop').disabled=true}
+}
+$('start').onclick=run;$('stop').onclick=()=>{stopped=true;$('stop').disabled=true;$('stage').textContent='STOPPED';$('detail').textContent='Pengujian dihentikan.';log('Pengujian dihentikan oleh pengguna.')}
+</script></section></main><footer><span>LUTFITECH © 2026</span><span>Digital Network Lab</span></footer><script src="../assets/js/app.js"></script>
